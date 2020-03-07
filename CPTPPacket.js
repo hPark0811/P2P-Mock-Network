@@ -1,7 +1,18 @@
 module.exports = {
+  /**
+   * creates the cPTP packet using buffer that will be used as a medium between peers
+   *
+   * @param version: packet verstion
+   * @param msgType: message type 1: Welcome, 2: Redirect
+   * @param senderId: sender id (directory name of peer)
+   * @param numOfPeers: num of peers in peer table
+   * @param reserved
+   * @param peerPort: peer port number that is connected to the current peer
+   * @param peerIP: peer ip address that is connected to the current peer
+   */
   createPacket: function (
     version,
-    msgType, // 1: Welcome, 2: Redirect
+    msgType, 
     senderId,
     numOfPeers,
     reserved,
@@ -12,26 +23,33 @@ module.exports = {
 
     let versionBuffer = Buffer.alloc(3);
     let msgTypeBuffer = Buffer.alloc(1);
-    let senderBuffer = Buffer.alloc(4, senderId.toString()); // name, which gets cut off after 4 letters
+    let senderBuffer = Buffer.alloc(4, "    "); // name, which gets cut off after 4 letters
     let numOfPeersBuffer = Buffer.alloc(4);
-    let reservedBuffer = Buffer.alloc(2);
-    let peerPortBuffer = Buffer.alloc(2);
+    let reservedBuffer;
+    let peerPortBuffer;
     let peerIPBuffer;
 
 
     if (numOfPeers > 0) {
       reservedBuffer = Buffer.alloc(2);
       peerPortBuffer = Buffer.alloc(2);
+      // Converting string IP address to array of unsigned int to fit in 4 bytes
       peerIPBuffer = Buffer.from(
         peerIP.split('.').map((str) => parseInt(str))
-      ); // Converting string IP address to array of unsigned int to fit in 4 bytes
+      );
+      reservedBuffer.writeInt16BE(reserved);
+      peerPortBuffer.writeUInt16BE(peerPort);
     }
 
     versionBuffer.writeInt16BE(version);
     msgTypeBuffer.writeInt8(msgType);
     numOfPeersBuffer.writeInt32BE(numOfPeers);
-    reservedBuffer.writeInt16BE(reserved);
-    peerPortBuffer.writeUInt16BE(peerPort);
+
+    while(senderId.length < 4) {
+      // Filler to fill allocated space of sender id
+      senderId += '&';
+    }
+    senderBuffer = Buffer.from(senderId);
 
     return numOfPeers === 0 ?
       // Packet doesn't need to include reserved, peer address if there are peers
