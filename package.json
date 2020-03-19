@@ -1,0 +1,19 @@
+{
+  "name": "p2p-connection-socket-practice",
+  "version": "1.0.0",
+  "description": "SE3314b assignment 2, where the learning objective is to understand how P2P connection happens in the implementation level",
+  "main": "peer.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hPark0811/P2P-Practice.git"
+  },
+  "author": "Heung Park",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hPark0811/P2P-Practice/issues"
+  },
+  "homepage": "https://github.com/hPark0811/P2P-Practice#readme"
+}
