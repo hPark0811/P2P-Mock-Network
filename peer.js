@@ -16,7 +16,7 @@ let addressNdx = process.argv.findIndex((param) => param === '-p');
 let maxPeerNdx = process.argv.findIndex((param) => param === '-n');
 maxPeer = maxPeerNdx !== -1 ? process.argv[maxPeerNdx + 1] : 2;
 
-// Assign version
+// Assign version TODO: Check 3314 later
 let versionNdx = process.argv.findIndex((param) => param === '-v');
 version = versionNdx !== -1 ? process.argv[versionNdx + 1] : 3314;
 

@@ -46,6 +46,7 @@ class PeerTable {
   }
   add(peerInfo) {
     this.table.push(peerInfo);
+    return peerInfo;
   }
 }
 
@@ -174,7 +175,7 @@ function initPeerConnection(client, connectingPort, connectingHost) {
   // Regardless of connection result, when starting to attempt connection to
   // another peer, it gets inserted into peer table as 'Pending' state needs to
   // be treated like a connection until disconnected.
-  peerTable.add(new PeerInfo(connectingHost, connectingPort));
+  const currPeer = peerTable.add(new PeerInfo(connectingHost, connectingPort));
 
   try {
     client.connect(connectingPort, connectingHost, () => {
@@ -196,7 +197,10 @@ function initPeerConnection(client, connectingPort, connectingHost) {
         console.log('   which is peered with: ' + peer.host + ':' + peer.localPort);
       }
 
-      if (CPTPObj.msgType === 2) {
+      if (CPTPObj.msgType === 1) {
+        currPeer.isPending = true;
+      }
+      else {
         console.log('[CLIENT] Join redirected from ' + CPTPObj.sender + ':' + connectingPort);
         declinedTable.add(new PeerInfo(connectingHost, connectingPort));
         client.destroy();
