@@ -1,8 +1,11 @@
 {
-  "name": "p2p-connection-socket-practice",
+  "name": "p2p-search-practice",
   "version": "1.0.0",
-  "description": "SE3314b assignment 2, where the learning objective is to understand how P2P connection happens in the implementation level",
+  "description": "SE3314b assignment 3, where the learning objective is to understand how P2P connection happens in the implementation level",
   "main": "peer.js",
+  "dependencies": {
+    "opn": "^5.5.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

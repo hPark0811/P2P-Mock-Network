@@ -1,5 +1,8 @@
-const CPTPPacket = require('./CPTPPacket'),
-      PeerInfo = require('./proto/PeerInfo')
+const CPTPPacket = require('./_packet/CPTPPacket'),
+  ITPPacket = require('./_packet/ITPPacket'),
+  PeerInfo = require('./_proto/PeerInfo'),
+  singleton = require('./Singleton'),
+  fs = require('fs');
 
 module.exports = {
 
@@ -10,7 +13,7 @@ module.exports = {
    * @param sender
    * @param sock
    */
-  handleClientJoining: function (maxPeerCount, sender, peerTable, sock) {
+  handlePeerJoin: (maxPeerCount, sender, peerTable, sock) => {
     // Creating packet to send
     let cPTPPacket = CPTPPacket.createPacket(
       3314,
@@ -57,5 +60,49 @@ module.exports = {
         console.log('[SERVER] CLOSED: ' + removedPeer.getAddress());
       }
     });
+  },
+  handleImageClientJoin: (sock) => {
+    console.log('[IMAGE CLIENT] CONNECTED: ' + sock.remoteAddress + ':' + sock.remotePort);
+
+    sock.on('data', (res) => {
+      // decode request packet
+      const reqPacket = ITPPacket.decodeReqPacket(res)
+
+      let resType = 3;
+      let imgData;
+      // TODO: Figure out if image server is being used.
+      const isBusy = false;
+      if (!isBusy) {
+        imgData = getImage(reqPacket.imgName);
+        resType = imgData ? 1 : 2;
+      }
+
+      // Create ITP packet using data from the client
+      const resPacket = ITPPacket.createResPacket(
+        reqPacket.version,
+        resType,
+        singleton.getSequenceNumber(),
+        singleton.getTimestamp(),
+        imgData
+      );
+      sock.write(resPacket);
+      sock.destroy();
+    })
+
+    sock.on('close', (res) => {
+      console.log('[IMAGE CLIENT] CLOSED: ' + sock.remoteAddress + ':' + sock.remotePort);
+    })
   }
+}
+
+function getImage(imgName) {
+  let imgData;
+  try {
+    console.log(process.cwd());
+    imgData = fs.readFileSync('./p2p_search/_res/' + imgName);
+  }
+  catch (e) {
+    console.error('image not found: ' + imgName)
+  }
+  return imgData;
 }

@@ -1,10 +1,9 @@
 const net = require('net'),
   singleton = require('./Singleton'),
-  CPTPPacket = require('./CPTPPacket'),
+  CPTPPacket = require('./_packet/CPTPPacket'),
   handler = require('./ClientsHandler'),
-  PeerInfo = require('./proto/PeerInfo');
+  PeerInfo = require('./_proto/PeerInfo');
 
-// TODO: Somehow check the pushed element and change max type.
 let peerTable, myHost, myPort;
 
 class PeerTable {
@@ -73,8 +72,6 @@ module.exports = {
     maxPeer,
     version
   ) {
-    // Initialize timestamp
-    singleton.init();
     peerTable = new PeerTable(maxPeer);
     declinedTable = new DeclinedTable(maxPeer);
 
@@ -98,7 +95,7 @@ module.exports = {
     });
 
     peer.on('connection', (sock) => {
-      handler.handleClientJoining(
+      handler.handlePeerJoin(
         maxPeer,
         DIR,
         peerTable,
