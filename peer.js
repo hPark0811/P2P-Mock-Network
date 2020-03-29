@@ -20,8 +20,5 @@ maxPeer = maxPeerNdx !== -1 ? process.argv[maxPeerNdx + 1] : 2;
 let versionNdx = process.argv.findIndex((param) => param === '-v');
 version = versionNdx !== -1 ? process.argv[versionNdx + 1] : 3314;
 
-peerManager.init(connectingHost, connectingPort, maxPeer, version);
-
-//TODO: Remove image load test below;
-
-p2pDB.initServer();
+p2pDB.initPeer(connectingHost, connectingPort, maxPeer, version);
+p2pDB.initImageServer();

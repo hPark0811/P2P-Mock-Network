@@ -61,6 +61,7 @@ module.exports = {
       }
     });
   },
+  
   handleImageClientJoin: (sock) => {
     console.log('[IMAGE CLIENT] CONNECTED: ' + sock.remoteAddress + ':' + sock.remotePort);
 
@@ -99,7 +100,8 @@ function getImage(imgName) {
   let imgData;
   try {
     console.log(process.cwd());
-    imgData = fs.readFileSync('./p2p_search/_res/' + imgName);
+    // TODO: Where to place db
+    imgData = fs.readFileSync('./' + imgName);
   }
   catch (e) {
     console.error('image not found: ' + imgName)

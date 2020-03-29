@@ -15,7 +15,7 @@ if (process.argv[2] !== '-s' || process.argv[4] !== '-q' || process.argv[6] !== 
 imgName = process.argv[5];
 version = process.argv[7];
 
-p2pDB.initClient(
+p2pDB.initImageClient(
   destHost,
   destPort,
   imgName,
