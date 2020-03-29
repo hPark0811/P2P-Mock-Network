@@ -1,4 +1,4 @@
-const PeerInfo = require('./proto/PeerInfo')
+const PeerInfo = require('../_proto/PeerInfo')
 
 class CPTPPacket {
   constructor(msgType, sender, peerList) {

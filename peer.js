@@ -1,4 +1,9 @@
-const peerManager = require('./PeerManager');
+const peerManager = require('./p2p_search/PeerManager'),
+  p2pDB = require('./p2p_search/peer2peerDB'),
+  singleton = require('./p2p_search/Singleton');
+
+// Initialize timestamp
+singleton.init();
 
 let connectingHost, connectingPort, maxPeer, version;
 
@@ -16,3 +21,7 @@ let versionNdx = process.argv.findIndex((param) => param === '-v');
 version = versionNdx !== -1 ? process.argv[versionNdx + 1] : 3314;
 
 peerManager.init(connectingHost, connectingPort, maxPeer, version);
+
+//TODO: Remove image load test below;
+
+p2pDB.initServer();
