@@ -7,60 +7,11 @@ let net = require('net'),
   ITPPacket = require('./_packet/ITPPacket'),
   CPTPPacket = require('./_packet/CPTPPacket'),
   PeerInfo = require('./_proto/PeerInfo'),
+  ds = require('./_data/DataSource'),
   fs = require('fs'),
   opn = require('opn');
 
-let peerTable, myPeerHost, myPeerPort, myImageHost, myImagePort;
-
-class PeerTable {
-  constructor(maxSize) {
-    this.maxSize = maxSize;
-    this.table = [];
-  }
-  size() {
-    return this.table.length;
-  }
-  isFull() {
-    return this.table.length >= this.maxSize;
-  }
-  removePeerByAddress(host, port, isLocalPort = true) {
-    let removedPeer = null;
-    let ndxOfPeer = this.table.findIndex((peer) => {
-      if (
-        host == peer.host &&
-        port == (isLocalPort ? peer.localPort : peer.remotePort)
-      ) {
-        removedPeer = peer;
-      }
-    });
-    this.table.splice(ndxOfPeer, 1);
-    return removedPeer;
-  }
-  contains(host, port, isLocalPort = true) {
-    return this.table.some((peer) => {
-      return (
-        host == peer.host &&
-        port == (isLocalPort ? peer.localPort : peer.remotePort)
-      )
-    });
-  }
-  add(peerInfo) {
-    this.table.push(peerInfo);
-    return peerInfo;
-  }
-}
-
-class DeclinedTable extends PeerTable {
-  add(peerInfo) {
-    if (this.contains(peerInfo.host, peerInfo.localPort)) {
-      this.removePeerByAddress(peerInfo.host, peerInfo.localPort);
-    }
-    if (this.isFull()) {
-      this.table.shift();
-    }
-    super.add(peerInfo);
-  }
-}
+let myPeerHost, myPeerPort, myImageHost, myImagePort;
 
 const DIR = process.cwd().split('/').pop();
 
@@ -79,8 +30,7 @@ module.exports = {
     maxPeer,
     version
   ) => {
-    peerTable = new PeerTable(maxPeer);
-    declinedTable = new DeclinedTable(maxPeer);
+    ds.init(maxPeer);
 
     // Hosting server by a peer
     let peer = net.createServer();
@@ -103,9 +53,9 @@ module.exports = {
 
     peer.on('connection', (sock) => {
       handler.handlePeerJoin(
+        version,
         maxPeer,
         DIR,
-        peerTable,
         sock
       );
     });
@@ -137,6 +87,7 @@ module.exports = {
 
     client.connect(destPort, destHost, () => {
       console.log('\nConnected to p2pDB server on: ' + destHost + ':' + destPort);
+      console.log('from ' + client.localAddress + ":" + client.localPort);
       client.write(packet);
     });
 
@@ -157,7 +108,7 @@ module.exports = {
         case 1:
           console.log('\nImage Found\n');
           fs.writeFileSync(imgName, resPacket.imgData);
-          //opn('./' + imgName, { wait: true });
+          opn('./' + imgName, { wait: true });
           break;
         case 2:
           console.log('\nImage Not Found\n');
@@ -175,7 +126,9 @@ function initPeerConnection(client, connectingPort, connectingHost) {
   // Regardless of connection result, when starting to attempt connection to
   // another peer, it gets inserted into peer table as 'Pending' state needs to
   // be treated like a connection until disconnected.
-  const currPeer = peerTable.add(new PeerInfo(connectingHost, connectingPort));
+  const currPeer = new PeerInfo(connectingHost, connectingPort)
+  currPeer.setSocket(client);
+  ds.peerTable.add(currPeer);
 
   try {
     client.connect(connectingPort, connectingHost, () => {
@@ -187,7 +140,7 @@ function initPeerConnection(client, connectingPort, connectingHost) {
 
     client.on('data', (data) => {
       // Decipher CPTP Packet into CPTPpacket class Object
-      const CPTPObj = CPTPPacket.decodePacket(data);
+      const CPTPObj = CPTPPacket.decodePeerPacket(data);
 
       // Generate connection logs
       // console.log('\n[CLIENT] Connected to peer: ' + CPTPObj.sender + ':' + connectingPort + ' at timestamp: ' + singleton.getTimestamp());
@@ -198,25 +151,25 @@ function initPeerConnection(client, connectingPort, connectingHost) {
       }
 
       if (CPTPObj.msgType === 1) {
-        currPeer.isPending = true;
+        currPeer.isPending = false;
       }
       else {
         console.log('[CLIENT] Join redirected from ' + CPTPObj.sender + ':' + connectingPort);
-        declinedTable.add(new PeerInfo(connectingHost, connectingPort));
+        ds.declinedTable.add(new PeerInfo(connectingHost, connectingPort));
         client.destroy();
       }
 
       for (let peer of CPTPObj.peerList) {
         // Avoid connecting more then its limit
-        if (peerTable.isFull()) {
+        if (ds.peerTable.isFull()) {
           console.log('[CLIENT] Peer table full, quit ' + peer.host + ":" + peer.localPort)
           return;
         }
         // Avoid connecting to duplicate port or declined port. 
         // Skips to next peer in list.
         if (
-          peerTable.contains(peer.host, peer.localPort) ||
-          declinedTable.contains(peer.host, peer.localPort)
+          ds.peerTable.contains(peer.host, peer.localPort) ||
+          ds.declinedTable.contains(peer.host, peer.localPort)
         ) {
           continue;
         }
@@ -233,7 +186,7 @@ function initPeerConnection(client, connectingPort, connectingHost) {
       console.log('[CLIENT] Connection closed at port: ' + connectingPort);
       // Closing connection is handled gracefully, and peer is removed from peer
       // table as well.
-      peerTable.removePeerByAddress(
+      ds.peerTable.removePeerByAddress(
         connectingHost,
         connectingPort,
         true
@@ -243,6 +196,6 @@ function initPeerConnection(client, connectingPort, connectingHost) {
   // In case of error occured during connection, peer table is sanitized.
   catch (connectionError) {
     console.log("[CLIENT] Error occured while connecting to: " + connectingHost + ":" + connectingPort);
-    peerTable.removePeerByAddress(connectingHost, connectingPort);
+    ds.peerTable.removePeerByAddress(connectingHost, connectingPort);
   }
 }

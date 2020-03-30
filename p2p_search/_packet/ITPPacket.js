@@ -29,6 +29,9 @@ class ITPReqPacket {
 }
 
 module.exports = {
+  isReq: (packet) => {
+    return packet.length < 16; 
+  },
   createResPacket: (
     version,
     resType,
@@ -85,6 +88,10 @@ module.exports = {
     const versionBuffer = Buffer.alloc(3);
     const reqTypeBuffer = Buffer.alloc(1);
     const imgNameBuffer = Buffer.from(imgName);
+
+    if (imgName.length > 12) {
+      throw new Error('image name should not exceed 12 characters');
+    }
 
     versionBuffer.writeInt16BE(version);
     reqTypeBuffer.writeInt8(reqType);

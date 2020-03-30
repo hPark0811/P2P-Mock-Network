@@ -11,6 +11,9 @@ class PeerInfo {
     this.localPort = lPort;
     this.isPending = isPending;
   }
+  setSocket(sock) {
+    this.sock = sock;
+  }
   getAddress() {
     return this.host + ':' + this.localPort;
   }
