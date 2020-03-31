@@ -30,7 +30,8 @@ class ITPReqPacket {
 
 module.exports = {
   isReq: (packet) => {
-    return packet.length < 16; 
+    const resType = data.slice(3, 4).readInt8()
+    return resType === 0;
   },
   createResPacket: (
     version,

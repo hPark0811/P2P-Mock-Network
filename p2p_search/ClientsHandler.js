@@ -7,6 +7,7 @@ const CPTPPacket = require('./_packet/CPTPPacket'),
   fs = require('fs');
 
 let clientSocket;
+let currImgName;
 
 module.exports = {
 
@@ -14,15 +15,14 @@ module.exports = {
    * handle client join request
    *
    * @param maxPeerCount
-   * @param sender
    * @param sock
    */
-  handlePeerJoin: (version, maxPeerCount, sender, sock) => {
+  handlePeerJoin: (version, maxPeerCount, sock) => {
     // Creating packet to send
     let cPTPPeerPacket = CPTPPacket.createPeerPacket(
       version,
       ds.peerTable.isFull() ? 2 : 1,
-      sender,
+      ds.myId,
       ds.peerTable
     );
     sock.write(cPTPPeerPacket);
@@ -119,21 +119,16 @@ module.exports = {
         // decode request packet
         const reqPacket = ITPPacket.decodeReqPacket(res);
 
-        let resType = 3;
-        let imgData;
-        // TODO: Figure out if image server is being used.
-        const isBusy = false;
-        if (!isBusy) {
-          imgData = getImage(reqPacket.imgName);
-          resType = imgData ? 1 : 2;
-        }
+        let imgData = getImage(reqPacket.imgName);
+        currImgName = reqPacket.imgName;
+        let resType = imgData ? 1 : 2;
 
         if (!imgData) {
           sendSearchPackets(
             CPTPPacket.createSearchPacket(
               3314,
-              1,
-              0,
+              2, // Image search packet is redirecting to connected peers
+              ds.myId,
               0,
               0,
               sock.localPort,
@@ -159,6 +154,27 @@ module.exports = {
       }
       // When packet length > 16, it's response package from different peer
       else {
+        const resPacket = ITPPacket.decodeResPacket(res);
+
+        switch (resPacket.resType) {
+          case 0:
+            console.log('\nServer in Query state\n');
+            break;
+          case 1:
+            console.log('\nImage Found\n');
+            fs.writeFileSync(
+              currImgName, 
+              resPacket.imgData
+            );
+            break;
+          case 2:
+            console.log('\nImage Not Found\n');
+            break;
+          default:
+            console.log('\nServer Busy\n');
+            break;
+        }
+
         clientSocket.write(res);
         clientSocket.destroy();
       }

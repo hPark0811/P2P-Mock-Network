@@ -13,8 +13,6 @@ let net = require('net'),
 
 let myPeerHost, myPeerPort, myImageHost, myImagePort;
 
-const DIR = process.cwd().split('/').pop();
-
 module.exports = {
   /**
    * handles P2P related actions, initiates connections
@@ -38,7 +36,7 @@ module.exports = {
     peer.listen(0, '127.0.0.1', () => {
       myPeerPort = peer.address().port;
       myPeerHost = peer.address().address;
-      console.log('\nThis peer address is ' + myPeerHost + ':' + myPeerPort + ' at ' + DIR);
+      console.log('\nThis peer address is ' + myPeerHost + ':' + myPeerPort + ' at ' + ds.myId);
 
       if (connectingPort && connectingHost) {
         // Peer acts as a client
@@ -55,7 +53,6 @@ module.exports = {
       handler.handlePeerJoin(
         version,
         maxPeer,
-        DIR,
         sock
       );
     });
@@ -117,6 +114,7 @@ module.exports = {
           console.log('\nServer Busy\n');
           break;
       }
+      client.destroy();
     });
   }
 }
