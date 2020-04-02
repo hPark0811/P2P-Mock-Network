@@ -2,17 +2,18 @@ const PeerTable = require('../_proto/PeerTable');
 const DeclinedTable = require('../_proto/DeclinedTable');
 const RecentQueryTable = require('../_proto/RecentQueryTable');
 
-
-const DataStore = {
+ /**
+   * Global data store object that holds the reference to objects used 
+   * throughout the codebase. 
+   */
+module.exports = {
   peerTable: null,
   declinedTable: null,
   recentQueryTable: null,
   myId: process.cwd().split('/').pop(),
-  init: (maxPeer) => {
-    DataStore.peerTable = new PeerTable(maxPeer);
-    DataStore.declinedTable = new DeclinedTable(maxPeer);
-    DataStore.recentQueryTable = new RecentQueryTable(maxPeer);
+  init: function(maxPeer) {
+    this.peerTable = new PeerTable(maxPeer);
+    this.declinedTable = new DeclinedTable(maxPeer);
+    this.recentQueryTable = new RecentQueryTable(maxPeer);
   }
-}
-
-module.exports = DataStore;
+};

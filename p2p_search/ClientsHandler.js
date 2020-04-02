@@ -8,12 +8,14 @@ const CPTPPacket = require('./_packet/CPTPPacket'),
 
 let clientSocket;
 let currImgName;
+let isBusy = false;
 
 module.exports = {
 
   /**
    * handle client join request
    *
+   * @param version
    * @param maxPeerCount
    * @param sock
    */
@@ -109,7 +111,11 @@ module.exports = {
       }
     });
   },
-
+  /**
+   * handle client join request for image query
+   *
+   * @param sock
+   */
   handleImageClientJoin: (sock) => {
     console.log('[IMAGE CLIENT] CONNECTED: ' + sock.remoteAddress + ':' + sock.remotePort);
 
@@ -141,6 +147,9 @@ module.exports = {
         }
 
         resType = imgData ? 1 : 2;
+        if (isBusy) {
+          resType = 3;
+        }
 
         // Create ITP packet using data from the client
         const resPacket = ITPPacket.createResPacket(
@@ -151,6 +160,12 @@ module.exports = {
           imgData
         );
         sock.write(resPacket);
+        
+        isBusy = true;
+        setTimeout(() => {
+          console.log('client no longer busy.')
+          isBusy = false;         
+        }, (1000))
       }
       // When packet length > 16, it's response package from different peer
       else {
@@ -188,6 +203,12 @@ module.exports = {
   }
 }
 
+/**
+ * searches image in the db (directory)
+ *
+ * @param {*} imgName
+ * @returns
+ */
 function getImage(imgName) {
   let imgData;
   try {
@@ -201,6 +222,11 @@ function getImage(imgName) {
   return imgData;
 }
 
+/**
+ * sends search packets to connected peers in peer table.
+ *
+ * @param {*} packet packet to send
+ */
 function sendSearchPackets(packet) {
   ds.peerTable.getConnectedPeers().forEach((peer) => {
     console.log('forwarding to ' + peer.localPort)

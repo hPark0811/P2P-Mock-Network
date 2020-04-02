@@ -1,3 +1,8 @@
+/**
+ * ITPResPacket object
+ *
+ * @class ITPResPacket
+ */
 class ITPResPacket {
   constructor(
     version,
@@ -16,6 +21,11 @@ class ITPResPacket {
   }
 }
 
+/**
+ * ITPReqPacket object
+ *
+ * @class ITPReqPacket
+ */
 class ITPReqPacket {
   constructor(
     version,
@@ -30,9 +40,18 @@ class ITPReqPacket {
 
 module.exports = {
   isReq: (packet) => {
-    const resType = data.slice(3, 4).readInt8()
+    const resType = packet.slice(3, 4).readInt8()
     return resType === 0;
   },
+  /**
+   * create ITP response packet buffer
+   *
+   * @param version version number of the packet 
+   * @param resType 0: query, 1: found, 2: not found, 3: busy
+   * @param seqNum seq number of the packet
+   * @param timestamp when packet was generated
+   * @param imgData decoded image data
+   */
   createResPacket: (
     version,
     resType,
@@ -64,6 +83,11 @@ module.exports = {
       imgBuffer
     ]);
   },
+  /**
+   * decode response packet into ITPResPacket object from buffer
+   *
+   * @param data ITPResPacket buffer
+   */
   decodeResPacket: (data) => {
     const version = data.slice(0, 3).readInt16BE();
     const resType = data.slice(3, 4).readInt8();
@@ -81,6 +105,13 @@ module.exports = {
       image
     );
   },
+  /**
+   * create ITP request packet buffer
+   *
+   * @param version version number of the packet 
+   * @param reqType 0: query, 1: found, 2: not found, 3: busy
+   * @param imgName
+   */
   createReqPacket: (
     version,
     reqType,
@@ -99,6 +130,13 @@ module.exports = {
 
     return Buffer.concat([versionBuffer, reqTypeBuffer, imgNameBuffer])
   },
+  /**
+   * create ITP request packet buffer
+   *
+   * @param byteArrPacket
+   * 
+   * @returns ITPRequestPacket object 
+   */
   decodeReqPacket: (byteArrPacket) => {
     // Decipher ITP packet received from client
     let version = byteArrPacket.slice(0, 3).readInt16BE();

@@ -20,7 +20,7 @@ module.exports = {
    * @param connectingHost: Host to connect to
    * @param connectingPort: Port to connect to
    * @param maxPeer: nax number of peers allowed to connect
-   * @param version=
+   * @param version
    */
   initPeer: (
     connectingHost,
@@ -57,20 +57,31 @@ module.exports = {
       );
     });
   },
+  /**
+   * instantiates image server
+   */
   initImageServer: () => {
-    let p2pDB = net.createServer();
+    let imageSocket = net.createServer();
 
-    p2pDB.listen(0, '127.0.0.1', () => {
-      myImagePort = p2pDB.address().port;
-      myImageHost = p2pDB.address().address;
+    imageSocket.listen(0, '127.0.0.1', () => {
+      myImagePort = imageSocket.address().port;
+      myImageHost = imageSocket.address().address;
       console.log('p2pDB server is started at timestamp: ' + singleton.getTimestamp() + ' and is listening on ' + myImageHost + ':' + myImagePort);
     });
 
-    p2pDB.on('connection', function (sock) {
+    imageSocket.on('connection', function (sock) {
       handler.handleImageClientJoin(sock); //called for each client joining
     });
 
   },
+  /**
+   * initiate connection to specified image server.
+   *
+   * @param destHost: Host to connect to
+   * @param destPort: Port to connect to
+   * @param imgName
+   * @param version
+   */
   initImageClient: (
     destHost,
     destPort,
@@ -81,6 +92,11 @@ module.exports = {
 
     // Create client socket connection
     const client = new net.Socket();
+
+    setTimeout(() => {
+      console.log("Closing GetImage client connection.")
+      client.destroy();
+    }, (2000));
 
     client.connect(destPort, destHost, () => {
       console.log('\nConnected to p2pDB server on: ' + destHost + ':' + destPort);
@@ -119,6 +135,13 @@ module.exports = {
   }
 }
 
+/**
+ * method to initiate peer connection
+ *
+ * @param {*} client
+ * @param {*} connectingPort
+ * @param {*} connectingHost
+ */
 function initPeerConnection(client, connectingPort, connectingHost) {
   // refill peer table.
   // Regardless of connection result, when starting to attempt connection to

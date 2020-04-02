@@ -1,4 +1,15 @@
+/**
+ * peer table object that provides necessary methods to modify the stored
+ * state of peer connections.
+ *
+ * @class PeerTable
+ */
 class PeerTable {
+  /**
+   *Creates an instance of PeerTable with maximum size.
+   * @param {*} maxSize
+   * @memberof PeerTable
+   */
   constructor(maxSize) {
     this.maxSize = maxSize;
     this.table = [];
@@ -9,6 +20,16 @@ class PeerTable {
   isFull() {
     return this.table.length >= this.maxSize;
   }
+  /**
+   * searches through peer table to find existing peer and removes it from the
+   * table
+   *
+   * @param {*} host
+   * @param {*} port
+   * @param {boolean} [isLocalPort=true]
+   * @returns
+   * @memberof PeerTable
+   */
   removePeerByAddress(host, port, isLocalPort = true) {
     let removedPeer = null;
     let ndxOfPeer = this.table.findIndex((peer) => {

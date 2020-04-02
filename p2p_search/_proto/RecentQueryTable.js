@@ -1,3 +1,8 @@
+/**
+ * Table of peers that recently queried for a certain image.
+ *
+ * @class RecentQueryTable
+ */
 class RecentQueryTable {
   constructor(size) {
     this.size = size;

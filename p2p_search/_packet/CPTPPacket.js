@@ -1,5 +1,10 @@
 const PeerInfo = require('../_proto/PeerInfo')
 
+/**
+ * CPTPPacket object blueprint.
+ *
+ * @class CPTPPacket
+ */
 class CPTPPacket {
   constructor(version, msgType, sender) {
     this.version = version;
@@ -8,6 +13,12 @@ class CPTPPacket {
   }
 }
 
+/**
+ * CPTP Search Packet blueprint.
+ *
+ * @class CPTPSearchPacket
+ * @extends {CPTPPacket}
+ */
 class CPTPSearchPacket extends CPTPPacket {
   constructor(
     version,
@@ -28,6 +39,12 @@ class CPTPSearchPacket extends CPTPPacket {
   }
 }
 
+/**
+ * CPTP peer connection request packet blueprint
+ *
+ * @class CPTPPeerPacket
+ * @extends {CPTPPacket}
+ */
 class CPTPPeerPacket extends CPTPPacket {
   constructor(version, msgType, sender, peerList) {
     super(version, msgType, sender)
@@ -46,7 +63,6 @@ module.exports = {
    * @param peerTable: table with peer connection information
    * @returns buffer of cPTP message
    */
-
   createPeerPacket: (
     version,
     msgType,
@@ -90,7 +106,13 @@ module.exports = {
       ...peerList
     ]);
   },
-
+  /**
+   * decode buffer of cPTP message into {CPTPPeerPacket} object
+   * 
+   * @param packet: CPTPPeerPacket buffer
+   * 
+   * @returns cPTPPeerPacket object
+   */
   decodePeerPacket: (packet) => {
     const version = packet.slice(0, 3).readInt16BE();
     const msgType = packet.slice(3, 4).readInt8();
@@ -115,6 +137,20 @@ module.exports = {
     return new CPTPPeerPacket(version, msgType, senderId, receivedPeers);
   },
 
+  /**
+   *
+   * creates cPTP search packet buffer.
+   *
+   * @param version: packet verstion
+   * @param msgType: message type 1: Welcome, 2: Redirect
+   * @param senderId: sender id (directory name of peer)
+   * @param searchId: unique search id
+   * @param reserved: reserved info of the packet
+   * @param srcImgPort: port address of the source image socket
+   * @param srcPeerHost: IPv4 address of the source image socket
+   * @param imgName: image name
+   * @returns buffer of cPTP message
+   */
   createSearchPacket: (
     version,
     msgType,
@@ -158,7 +194,13 @@ module.exports = {
       imgNameBuffer
     ]);
   },
-
+  /**
+   * decode buffer of cPTP message into {CPTPSearchPacket} object
+   * 
+   * @param packet: CPTPSearchPacket buffer
+   * 
+   * @returns CPTPSearchPacket object
+   */
   decodeSearchPacket: (packet) => {
     const version = packet.slice(0, 3).readInt16BE();
     const msgType = packet.slice(3, 4).readInt8();
