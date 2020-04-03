@@ -1,5 +1,4 @@
-const peerManager = require('./p2p_search/PeerManager'),
-  p2pDB = require('./p2p_search/peer2peerDB'),
+const p2pDB = require('./p2p_search/peer2peerDB'),
   singleton = require('./p2p_search/Singleton');
 
 // Initialize timestamp
@@ -14,7 +13,7 @@ let addressNdx = process.argv.findIndex((param) => param === '-p');
 
 // Assign max peer count TODO: Change to 6 later
 let maxPeerNdx = process.argv.findIndex((param) => param === '-n');
-maxPeer = maxPeerNdx !== -1 ? process.argv[maxPeerNdx + 1] : 2;
+maxPeer = maxPeerNdx !== -1 ? process.argv[maxPeerNdx + 1] : 6;
 
 // Assign version
 let versionNdx = process.argv.findIndex((param) => param === '-v');

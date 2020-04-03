@@ -7,61 +7,11 @@ let net = require('net'),
   ITPPacket = require('./_packet/ITPPacket'),
   CPTPPacket = require('./_packet/CPTPPacket'),
   PeerInfo = require('./_proto/PeerInfo'),
+  ds = require('./_data/DataSource'),
   fs = require('fs'),
   opn = require('opn');
 
-let peerTable, myPeerHost, myPeerPort, myImageHost, myImagePort;
-
-class PeerTable {
-  constructor(maxSize) {
-    this.maxSize = maxSize;
-    this.table = [];
-  }
-  size() {
-    return this.table.length;
-  }
-  isFull() {
-    return this.table.length >= this.maxSize;
-  }
-  removePeerByAddress(host, port, isLocalPort = true) {
-    let removedPeer = null;
-    let ndxOfPeer = this.table.findIndex((peer) => {
-      if (
-        host == peer.host &&
-        port == (isLocalPort ? peer.localPort : peer.remotePort)
-      ) {
-        removedPeer = peer;
-      }
-    });
-    this.table.splice(ndxOfPeer, 1);
-    return removedPeer;
-  }
-  contains(host, port, isLocalPort = true) {
-    return this.table.some((peer) => {
-      return (
-        host == peer.host &&
-        port == (isLocalPort ? peer.localPort : peer.remotePort)
-      )
-    });
-  }
-  add(peerInfo) {
-    this.table.push(peerInfo);
-  }
-}
-
-class DeclinedTable extends PeerTable {
-  add(peerInfo) {
-    if (this.contains(peerInfo.host, peerInfo.localPort)) {
-      this.removePeerByAddress(peerInfo.host, peerInfo.localPort);
-    }
-    if (this.isFull()) {
-      this.table.shift();
-    }
-    super.add(peerInfo);
-  }
-}
-
-const DIR = process.cwd().split('/').pop();
+let myPeerHost, myPeerPort, myImageHost, myImagePort;
 
 module.exports = {
   /**
@@ -70,7 +20,7 @@ module.exports = {
    * @param connectingHost: Host to connect to
    * @param connectingPort: Port to connect to
    * @param maxPeer: nax number of peers allowed to connect
-   * @param version=
+   * @param version
    */
   initPeer: (
     connectingHost,
@@ -78,8 +28,7 @@ module.exports = {
     maxPeer,
     version
   ) => {
-    peerTable = new PeerTable(maxPeer);
-    declinedTable = new DeclinedTable(maxPeer);
+    ds.init(maxPeer);
 
     // Hosting server by a peer
     let peer = net.createServer();
@@ -87,7 +36,7 @@ module.exports = {
     peer.listen(0, '127.0.0.1', () => {
       myPeerPort = peer.address().port;
       myPeerHost = peer.address().address;
-      console.log('\nThis peer address is ' + myPeerHost + ':' + myPeerPort + ' at ' + DIR);
+      console.log('\nThis peer address is ' + myPeerHost + ':' + myPeerPort + ' at ' + ds.myId);
 
       if (connectingPort && connectingHost) {
         // Peer acts as a client
@@ -102,27 +51,37 @@ module.exports = {
 
     peer.on('connection', (sock) => {
       handler.handlePeerJoin(
+        version,
         maxPeer,
-        DIR,
-        peerTable,
         sock
       );
     });
   },
+  /**
+   * instantiates image server
+   */
   initImageServer: () => {
-    let p2pDB = net.createServer();
+    let imageSocket = net.createServer();
 
-    p2pDB.listen(0, '127.0.0.1', () => {
-      myImagePort = p2pDB.address().port;
-      myImageHost = p2pDB.address().address;
+    imageSocket.listen(0, '127.0.0.1', () => {
+      myImagePort = imageSocket.address().port;
+      myImageHost = imageSocket.address().address;
       console.log('p2pDB server is started at timestamp: ' + singleton.getTimestamp() + ' and is listening on ' + myImageHost + ':' + myImagePort);
     });
 
-    p2pDB.on('connection', function (sock) {
+    imageSocket.on('connection', function (sock) {
       handler.handleImageClientJoin(sock); //called for each client joining
     });
 
   },
+  /**
+   * initiate connection to specified image server.
+   *
+   * @param destHost: Host to connect to
+   * @param destPort: Port to connect to
+   * @param imgName
+   * @param version
+   */
   initImageClient: (
     destHost,
     destPort,
@@ -134,8 +93,14 @@ module.exports = {
     // Create client socket connection
     const client = new net.Socket();
 
+    setTimeout(() => {
+      console.log("Closing GetImage client connection.")
+      client.destroy();
+    }, (2000));
+
     client.connect(destPort, destHost, () => {
       console.log('\nConnected to p2pDB server on: ' + destHost + ':' + destPort);
+      console.log('from ' + client.localAddress + ":" + client.localPort);
       client.write(packet);
     });
 
@@ -156,7 +121,7 @@ module.exports = {
         case 1:
           console.log('\nImage Found\n');
           fs.writeFileSync(imgName, resPacket.imgData);
-          //opn('./' + imgName, { wait: true });
+          opn('./' + imgName, { wait: true });
           break;
         case 2:
           console.log('\nImage Not Found\n');
@@ -165,16 +130,26 @@ module.exports = {
           console.log('\nServer Busy\n');
           break;
       }
+      client.destroy();
     });
   }
 }
 
+/**
+ * method to initiate peer connection
+ *
+ * @param {*} client
+ * @param {*} connectingPort
+ * @param {*} connectingHost
+ */
 function initPeerConnection(client, connectingPort, connectingHost) {
   // refill peer table.
   // Regardless of connection result, when starting to attempt connection to
   // another peer, it gets inserted into peer table as 'Pending' state needs to
   // be treated like a connection until disconnected.
-  peerTable.add(new PeerInfo(connectingHost, connectingPort));
+  const currPeer = new PeerInfo(connectingHost, connectingPort)
+  currPeer.setSocket(client);
+  ds.peerTable.add(currPeer);
 
   try {
     client.connect(connectingPort, connectingHost, () => {
@@ -186,7 +161,7 @@ function initPeerConnection(client, connectingPort, connectingHost) {
 
     client.on('data', (data) => {
       // Decipher CPTP Packet into CPTPpacket class Object
-      const CPTPObj = CPTPPacket.decodePacket(data);
+      const CPTPObj = CPTPPacket.decodePeerPacket(data);
 
       // Generate connection logs
       // console.log('\n[CLIENT] Connected to peer: ' + CPTPObj.sender + ':' + connectingPort + ' at timestamp: ' + singleton.getTimestamp());
@@ -196,23 +171,26 @@ function initPeerConnection(client, connectingPort, connectingHost) {
         console.log('   which is peered with: ' + peer.host + ':' + peer.localPort);
       }
 
-      if (CPTPObj.msgType === 2) {
+      if (CPTPObj.msgType === 1) {
+        currPeer.isPending = false;
+      }
+      else {
         console.log('[CLIENT] Join redirected from ' + CPTPObj.sender + ':' + connectingPort);
-        declinedTable.add(new PeerInfo(connectingHost, connectingPort));
+        ds.declinedTable.add(new PeerInfo(connectingHost, connectingPort));
         client.destroy();
       }
 
       for (let peer of CPTPObj.peerList) {
         // Avoid connecting more then its limit
-        if (peerTable.isFull()) {
+        if (ds.peerTable.isFull()) {
           console.log('[CLIENT] Peer table full, quit ' + peer.host + ":" + peer.localPort)
           return;
         }
         // Avoid connecting to duplicate port or declined port. 
         // Skips to next peer in list.
         if (
-          peerTable.contains(peer.host, peer.localPort) ||
-          declinedTable.contains(peer.host, peer.localPort)
+          ds.peerTable.contains(peer.host, peer.localPort) ||
+          ds.declinedTable.contains(peer.host, peer.localPort)
         ) {
           continue;
         }
@@ -229,7 +207,7 @@ function initPeerConnection(client, connectingPort, connectingHost) {
       console.log('[CLIENT] Connection closed at port: ' + connectingPort);
       // Closing connection is handled gracefully, and peer is removed from peer
       // table as well.
-      peerTable.removePeerByAddress(
+      ds.peerTable.removePeerByAddress(
         connectingHost,
         connectingPort,
         true
@@ -239,6 +217,6 @@ function initPeerConnection(client, connectingPort, connectingHost) {
   // In case of error occured during connection, peer table is sanitized.
   catch (connectionError) {
     console.log("[CLIENT] Error occured while connecting to: " + connectingHost + ":" + connectingPort);
-    peerTable.removePeerByAddress(connectingHost, connectingPort);
+    ds.peerTable.removePeerByAddress(connectingHost, connectingPort);
   }
 }
