@@ -213,7 +213,6 @@ function getImage(imgName) {
   let imgData;
   try {
     console.log(process.cwd());
-    // TODO: Where to place db
     imgData = fs.readFileSync('./' + imgName);
   }
   catch (e) {

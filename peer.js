@@ -11,9 +11,17 @@ let addressNdx = process.argv.findIndex((param) => param === '-p');
 [connectingHost, connectingPort] =
   (addressNdx !== -1) ? process.argv[addressNdx + 1].split(':') : [null, null];
 
-// Assign max peer count TODO: Change to 6 later
 let maxPeerNdx = process.argv.findIndex((param) => param === '-n');
-maxPeer = maxPeerNdx !== -1 ? process.argv[maxPeerNdx + 1] : 6;
+if (maxPeerNdx === -1) {
+  console.log('max peer is not specified, assigning default value of 6');
+  maxPeer = 6;
+} 
+else if (process.argv[maxPeerNdx + 1] <= 0) {
+  maxPeer = process.argv[maxPeerNdx + 1];
+}
+else {
+  throw new Error('max peer cannot be zero or negative value');
+}
 
 // Assign version
 let versionNdx = process.argv.findIndex((param) => param === '-v');
