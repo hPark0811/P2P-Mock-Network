@@ -94,9 +94,11 @@ module.exports = {
           client.destroy();
         });
       }
+      // Image is not found in this peer, forward search packet to all
+      // of its neighbours.
       else {
         ds.peerTable.getConnectedPeers().forEach((peer) => {
-          peer.sock.write(peer);
+          peer.sock.write(data);
         })
       }
     });
